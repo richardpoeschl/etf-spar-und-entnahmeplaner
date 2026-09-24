@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ETF Spar- & Entnahmeplaner</title>
+<meta name="theme-color" content="#0b5cab">
+<meta name="description" content="Lokale Simulation von ETF-Sparplan, Ruhephase und FIFO-Entnahme mit vereinfachter Steuerberechnung.">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<style>
+:root{--blue:#0b5cab;--blue2:#147bd1;--ink:#152335;--muted:#607086;--bg:#f3f7fb;--card:#fff;--line:#dce6f1;--green:#138a5b;--red:#c23b47;--shadow:0 8px 24px rgba(17,58,102,.09)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink)}
+header{background:linear-gradient(135deg,#063f79,#0b6fc6);color:#fff;padding:22px max(18px,calc((100% - 1180px)/2));box-shadow:var(--shadow)}
+header h1{margin:0;font-size:clamp(23px,4vw,34px)}header p{margin:5px 0 0;opacity:.88}
+main{max-width:1180px;margin:24px auto;padding:0 16px 50px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow)}
+.card h2{font-size:18px;margin:0 0 4px}.sub{color:var(--muted);font-size:13px;margin:0 0 15px}.field{margin:12px 0}.field label{display:flex;justify-content:space-between;gap:10px;font-weight:650;font-size:13px;margin-bottom:5px}.field input,.field select{width:100%;border:1px solid #bdcddd;border-radius:10px;padding:10px 11px;background:#fff;color:var(--ink);font:inherit}.field input:focus,.field select:focus{outline:3px solid #d7ebff;border-color:var(--blue2)}
+.inline{display:grid;grid-template-columns:1fr 1fr;gap:10px}.switchrow{display:flex;align-items:center;justify-content:space-between;padding:10px 0}.switch{position:relative;width:46px;height:26px}.switch input{display:none}.slider{position:absolute;inset:0;background:#c6d1dc;border-radius:20px;cursor:pointer}.slider:before{content:"";position:absolute;width:20px;height:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}.switch input:checked+.slider{background:var(--blue2)}.switch input:checked+.slider:before{transform:translateX(20px)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}.btn{border:0;border-radius:12px;padding:12px 18px;font-weight:750;cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#e6eef7;color:#16436f}.btn:hover{filter:brightness(.97)}
+.results{display:none}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.kpi{background:#fff;border:1px solid var(--line);border-radius:16px;padding:15px;box-shadow:var(--shadow)}.kpi span{display:block;color:var(--muted);font-size:12px;font-weight:650}.kpi strong{display:block;font-size:clamp(18px,2.7vw,27px);margin-top:5px}.kpi.blue{border-top:4px solid var(--blue2)}.kpi.green{border-top:4px solid var(--green)}.kpi.orange{border-top:4px solid #df8b21}.kpi.red{border-top:4px solid var(--red)}
+.wide{margin-top:16px}.chartbox{height:330px;position:relative}canvas{width:100%;height:100%}.details{display:grid;grid-template-columns:1fr 1fr;gap:16px}.statlist{display:grid;grid-template-columns:1fr auto;gap:8px 16px}.statlist div{padding:7px 0;border-bottom:1px solid var(--line)}.statlist div:nth-child(even){font-weight:700;text-align:right}.note{background:#eaf4ff;border-left:4px solid var(--blue2);padding:12px 14px;border-radius:10px;color:#334f6d;font-size:13px}.hidden{display:none!important}.error{background:#fff1f2;color:#922a35;border:1px solid #f3cbd0;padding:12px;border-radius:10px;display:none}.footer{color:var(--muted);font-size:12px;margin-top:18px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}.details{grid-template-columns:1fr}}@media(max-width:520px){.kpis{grid-template-columns:1fr}.inline{grid-template-columns:1fr}.chartbox{height:260px}}
+</style></head>
+<body><header><h1>ETF Spar- & Entnahmeplaner</h1><p>Sparphase, optionale Ruhephase und steueroptimierte FIFO-Entnahme in einer Simulation.</p></header>
+<main>
+<div class="grid">
+<section class="card"><h2>1. Sparphase</h2><p class="sub">Aufbau des Vermögens mit monatlichen Tranchen</p>
+<div class="inline"><div class="field"><label>Startkapital</label><input id="start" type="number" min="0" step="100" value="0"></div><div class="field"><label>Einstandswert Startkapital</label><input id="startBasis" type="number" min="0" step="100" value="0"></div></div>
+<div class="field"><label>Monatliche Sparrate</label><input id="save" type="number" min="0" step="10" value="1000"></div>
+<div class="inline"><div class="field"><label>Rendite p. a.</label><input id="rSave" type="number" step="0.1" value="6"></div><div class="field"><label>Spardauer (Jahre)</label><input id="yearsSave" type="number" min="0" max="80" step="1" value="20"></div></div>
+<div class="field"><label>Einzahlung</label><select id="contribTiming"><option value="start">Monatsanfang</option><option value="end">Monatsende</option></select></div>
+</section>
+<section class="card"><h2>2. Ruhephase</h2><p class="sub">Optionales Weiterlaufen ohne Einzahlungen</p>
+<div class="switchrow"><b>Ruhephase berücksichtigen</b><label class="switch"><input id="restOn" type="checkbox"><span class="slider"></span></label></div>
+<div id="restFields" class="hidden"><div class="field"><label>Dauer (Jahre)</label><input id="yearsRest" type="number" min="0" max="50" step="1" value="5"></div><div class="field"><label>Rendite p. a.</label><input id="rRest" type="number" step="0.1" value="4"></div></div>
+<div class="note">Während der Ruhephase werden keine neuen Tranchen erzeugt. Alle bestehenden Tranchen entwickeln sich mit der gewählten Rendite weiter.</div>
+</section>
+<section class="card"><h2>3. Entnahmephase</h2><p class="sub">Regelmäßige Nettoentnahme mit FIFO und Standardsteuer</p>
+<div class="inline"><div class="field"><label>Rendite p. a.</label><input id="rDraw" type="number" step="0.1" value="3"></div><div class="field"><label>Dauer (Jahre)</label><input id="yearsDraw" type="number" min="1" max="60" step="1" value="25"></div></div>
+<div class="field"><label>Ziel am Laufzeitende</label><select id="targetMode"><option value="zero">Vollständiger Kapitalverzehr</option><option value="remain">Gewünschter Endbestand</option></select></div>
+<div id="remainField" class="field hidden"><label>Gewünschter Endbestand</label><input id="targetRemain" type="number" min="0" step="1000" value="50000"></div>
+<div class="field"><label>Entnahme</label><select id="drawTiming"><option value="end">Monatsende</option><option value="start">Monatsanfang</option></select></div>
+</section></div>
+<section class="card wide"><h2>Steuerparameter</h2><p class="sub">Vereinfachter Standardmodus ohne Vorabpauschalen</p><div class="grid">
+<div><div class="field"><label>Teilfreistellung</label><select id="exempt"><option value="30">30 % Aktienfonds</option><option value="15">15 % Mischfonds</option><option value="0">0 %</option></select></div></div>
+<div><div class="field"><label>Kirchensteuer</label><select id="church"><option value="0">Keine</option><option value="8">8 %</option><option value="9">9 %</option></select></div></div>
+<div><div class="field"><label>Sparer-Pauschbetrag pro Jahr</label><input id="allowance" type="number" min="0" step="1" value="1000"></div><div class="field"><label>Davon anderweitig verbraucht</label><input id="usedAllowance" type="number" min="0" step="1" value="0"></div></div>
+</div><div class="note">Berechnet werden FIFO, Teilfreistellung, 25 % Kapitalertragsteuer, Solidaritätszuschlag und optionale Kirchensteuer. Vorabpauschalen, Verlusttöpfe, Ausschüttungen und Sonderfälle bleiben bewusst unberücksichtigt.</div></section>
+<div class="actions"><button class="btn primary" id="calc">Plan berechnen</button><button class="btn secondary" id="reset">Eingaben zurücksetzen</button></div><div id="error" class="error"></div>
+<section id="results" class="results"><div class="kpis">
+<div class="kpi blue"><span>Vermögen nach Sparphase</span><strong id="kSave">–</strong></div><div class="kpi blue"><span>Vermögen zum Entnahmebeginn</span><strong id="kDrawStart">–</strong></div><div class="kpi green"><span>Monatliche Nettoentnahme</span><strong id="kNet">–</strong></div><div class="kpi orange"><span>Steuern gesamt</span><strong id="kTax">–</strong></div>
+</div>
+<section class="card wide"><h2>Vermögensverlauf</h2><p class="sub">Nominale Modellrechnung auf Monatsbasis</p><div class="chartbox"><canvas id="chart"></canvas></div></section>
+<div class="details wide"><section class="card"><h2>Planübersicht</h2><div class="statlist" id="planStats"></div></section><section class="card"><h2>FIFO & Steuern</h2><div class="statlist" id="taxStats"></div></section></div>
+<p class="footer">Hinweis: Modellrechnung für private Planungszwecke, keine Anlage-, Steuer- oder Rechtsberatung. Rundungen und die bewusst vereinfachte Steuerlogik können zu Abweichungen gegenüber einer tatsächlichen Depotabrechnung führen.</p></section>
+</main>
+<script>
+const $=id=>document.getElementById(id), ids=['start','startBasis','save','rSave','yearsSave','contribTiming','restOn','yearsRest','rRest','rDraw','yearsDraw','targetMode','targetRemain','drawTiming','exempt','church','allowance','usedAllowance'];
+const defaults={}; ids.forEach(id=>defaults[id]=$(id).type==='checkbox'?$(id).checked:$(id).value);
+const eur=n=>new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n); const pct=n=>new Intl.NumberFormat('de-DE',{maximumFractionDigits:1}).format(n)+' %';
+function monthlyRate(annual){return Math.pow(1+annual/100,1/12)-1} function grow(tranches,r){for(const t of tranches)t.value*=1+r}
+function val(){let o={};ids.forEach(id=>o[id]=$(id).type==='checkbox'?$(id).checked:+$(id).value||$(id).value);return o}
+function taxRate(church){let k=church/100; return k?(.25*(1+.055)/(1+.25*k)+(.25/(1+.25*k))*k):.25*1.055}
+function cloneT(t){return t.map(x=>({...x}))}
+function sellForNet(tranches,net,taxState,p){
+ let available=tranches.reduce((s,t)=>s+t.value,0); if(net<=0)return {gross:0,tax:0,gain:0};
+ let lo=net,hi=Math.min(available,net/0.70+100),best=null;
+ for(let z=0;z<45;z++){let gross=(lo+hi)/2,res=previewSell(tranches,gross,taxState,p);best=res; if(gross-res.tax<net)lo=gross;else hi=gross}
+ let gross=Math.min(available,hi),res=previewSell(tranches,gross,taxState,p); applySell(tranches,res.parts); taxState.allowanceLeft=res.allowanceLeft; return {...res,gross,net:Math.max(0,gross-res.tax)}
+}
+function previewSell(tranches,gross,taxState,p){let left=gross,gain=0,parts=[];for(let i=0;i<tranches.length&&left>1e-8;i++){let t=tranches[i];if(t.value<=1e-8)continue;let take=Math.min(left,t.value),ratio=take/t.value,basisTake=t.basis*ratio;gain+=Math.max(0,take-basisTake);parts.push({i,take,basisTake});left-=take}
+ let taxable=Math.max(0,gain*(1-p.exempt/100)),allow=Math.min(taxState.allowanceLeft,taxable),after=Math.max(0,taxable-allow),tax=after*p.taxRate;return{tax,gain,taxable,allowanceLeft:taxState.allowanceLeft-allow,parts}}
+function applySell(tranches,parts){for(const x of parts){tranches[x.i].value-=x.take;tranches[x.i].basis-=x.basisTake}while(tranches.length&&tranches[0].value<.01)tranches.shift()}
+function simulateDraw(startT,net,p,record=false){let t=cloneT(startT),taxTotal=0,gainTotal=0,grossTotal=0,series=[],yearTax=[],state={allowanceLeft:p.allowance};for(let m=0;m<p.months;m++){if(m%12===0)state.allowanceLeft=p.allowance;if(p.timing==='start'){let s=sellForNet(t,net,state,p);taxTotal+=s.tax;gainTotal+=s.gain;grossTotal+=s.gross;yearTax[Math.floor(m/12)]=(yearTax[Math.floor(m/12)]||0)+s.tax;grow(t,p.r)}else{grow(t,p.r);let s=sellForNet(t,net,state,p);taxTotal+=s.tax;gainTotal+=s.gain;grossTotal+=s.gross;yearTax[Math.floor(m/12)]=(yearTax[Math.floor(m/12)]||0)+s.tax}if(record)series.push(t.reduce((a,x)=>a+x.value,0))}return{end:t.reduce((a,x)=>a+x.value,0),taxTotal,gainTotal,grossTotal,series,yearTax,remainingBasis:t.reduce((a,x)=>a+x.basis,0)}}
+function calculate(){try{let v=val(); let nums=['start','startBasis','save','rSave','yearsSave','rDraw','yearsDraw','allowance','usedAllowance'];for(const k of nums)if(!Number.isFinite(+v[k]))throw Error('Bitte alle Pflichtfelder vollständig ausfüllen.');if(+v.startBasis>+v.start)throw Error('Der Einstandswert des Startkapitals darf den Startwert nicht überschreiten.');let tr=[];if(+v.start>0)tr.push({value:+v.start,basis:+v.startBasis||+v.start,month:-1});let hist=[tr.reduce((s,t)=>s+t.value,0)],rS=monthlyRate(+v.rSave),saveMonths=Math.round(+v.yearsSave*12);
+ for(let m=0;m<saveMonths;m++){if(v.contribTiming==='start'&&+v.save>0)tr.push({value:+v.save,basis:+v.save,month:m});grow(tr,rS);if(v.contribTiming==='end'&&+v.save>0)tr.push({value:+v.save,basis:+v.save,month:m});hist.push(tr.reduce((s,t)=>s+t.value,0))}let afterSave=hist.at(-1),restMonths=v.restOn?Math.round(+v.yearsRest*12):0,rR=monthlyRate(+v.rRest);for(let m=0;m<restMonths;m++){grow(tr,rR);hist.push(tr.reduce((s,t)=>s+t.value,0))}let drawStart=hist.at(-1),target=v.targetMode==='zero'?0:+v.targetRemain;if(target>=drawStart)throw Error('Der gewünschte Endbestand muss unter dem Vermögen zum Entnahmebeginn liegen.');let p={months:Math.round(+v.yearsDraw*12),r:monthlyRate(+v.rDraw),timing:v.drawTiming,exempt:+v.exempt,taxRate:taxRate(+v.church),allowance:Math.max(0,+v.allowance-+v.usedAllowance)};
+ let lo=0,hi=Math.max(1,drawStart/p.months*3+drawStart*p.r*2);while(simulateDraw(tr,hi,p).end>target&&hi<drawStart)hi*=1.5;for(let i=0;i<55;i++){let mid=(lo+hi)/2,res=simulateDraw(tr,mid,p);if(res.end>target)lo=mid;else hi=mid}let net=(lo+hi)/2,res=simulateDraw(tr,net,p,true);let offset=hist.length-1;let full=hist.concat(res.series);render(v,{afterSave,drawStart,net,res,target,full,saveMonths,restMonths,tranCount:(+v.start>0?1:0)+saveMonths});saveLocal();$('error').style.display='none';$('results').style.display='block';$('results').scrollIntoView({behavior:'smooth',block:'start'});
+ }catch(e){$('error').textContent=e.message;$('error').style.display='block'}}
+function render(v,x){$('kSave').textContent=eur(x.afterSave);$('kDrawStart').textContent=eur(x.drawStart);$('kNet').textContent=eur(x.net);$('kTax').textContent=eur(x.res.taxTotal);let paid=+v.start+(+v.save*x.saveMonths);$('planStats').innerHTML=rows([['Einzahlungen gesamt',eur(paid)],['Gewinn bis Entnahmebeginn',eur(x.drawStart-paid)],['Ruhephase',x.restMonths?x.restMonths/12+' Jahre':'Keine'],['Bruttoentnahmen gesamt',eur(x.res.grossTotal)],['Nettoentnahmen gesamt',eur(x.net*+v.yearsDraw*12)],['Berechneter Endbestand',eur(x.res.end)],['Vorgegebener Zielbestand',eur(x.target)]]);$('taxStats').innerHTML=rows([['FIFO-Tranchen erzeugt',String(x.tranCount)],['Realisierte Gewinne',eur(x.res.gainTotal)],['Teilfreistellung',pct(+v.exempt)],['Effektiver Steuersatz vor Freibetrag',pct(taxRate(+v.church)*100)],['Sparer-Pauschbetrag verfügbar',eur(Math.max(0,+v.allowance-+v.usedAllowance))+' p. a.'],['Verbleibender Einstandswert',eur(x.res.remainingBasis)]]);drawChart(x.full,x.saveMonths,x.restMonths)}
+function rows(a){return a.map(([a,b])=>`<div>${a}</div><div>${b}</div>`).join('')}
+function drawChart(data,saveM,restM){let c=$('chart'),dpr=devicePixelRatio||1,w=c.clientWidth,h=c.clientHeight;c.width=w*dpr;c.height=h*dpr;let g=c.getContext('2d');g.scale(dpr,dpr);g.clearRect(0,0,w,h);let pad={l:70,r:18,t:25,b:42},pw=w-pad.l-pad.r,ph=h-pad.t-pad.b,max=Math.max(...data,1);g.font='12px system-ui';g.strokeStyle='#dce6f1';g.fillStyle='#607086';g.textAlign='right';for(let i=0;i<=5;i++){let y=pad.t+ph*i/5,v=max*(1-i/5);g.beginPath();g.moveTo(pad.l,y);g.lineTo(w-pad.r,y);g.stroke();g.fillText(new Intl.NumberFormat('de-DE',{notation:'compact',maximumFractionDigits:1}).format(v)+' €',pad.l-8,y+4)}g.textAlign='center';let total=data.length-1;for(let i=0;i<=4;i++){let x=pad.l+pw*i/4;g.fillText(Math.round(total*i/48)/1+' J.',x,h-13)}function xpos(i){return pad.l+pw*i/Math.max(1,total)}function ypos(v){return pad.t+ph*(1-v/max)};g.beginPath();data.forEach((v,i)=>i?g.lineTo(xpos(i),ypos(v)):g.moveTo(xpos(i),ypos(v)));g.strokeStyle='#0b6fc6';g.lineWidth=3;g.stroke();g.lineTo(xpos(total),pad.t+ph);g.lineTo(pad.l,pad.t+ph);g.closePath();let gr=g.createLinearGradient(0,pad.t,0,pad.t+ph);gr.addColorStop(0,'rgba(20,123,209,.22)');gr.addColorStop(1,'rgba(20,123,209,.02)');g.fillStyle=gr;g.fill();for(const [m,col,label] of [[saveM,'#138a5b','Ende Sparphase'],[saveM+restM,'#df8b21','Entnahmebeginn']]){if(m>0&&m<total){let x=xpos(m);g.beginPath();g.moveTo(x,pad.t);g.lineTo(x,pad.t+ph);g.strokeStyle=col;g.lineWidth=1.5;g.setLineDash([5,5]);g.stroke();g.setLineDash([])}}}
+function saveLocal(){let o={};ids.forEach(id=>o[id]=$(id).type==='checkbox'?$(id).checked:$(id).value);localStorage.setItem('etfPlanerSettings',JSON.stringify(o))}
+function loadLocal(){try{let o=JSON.parse(localStorage.getItem('etfPlanerSettings'));if(!o)return;ids.forEach(id=>{if(o[id]!==undefined)$(id).type==='checkbox'?$(id).checked=o[id]:$(id).value=o[id]})}catch{}}
+function refresh(){ $('restFields').classList.toggle('hidden',!$('restOn').checked);$('remainField').classList.toggle('hidden',$('targetMode').value!=='remain')}
+$('restOn').onchange=refresh;$('targetMode').onchange=refresh;$('calc').onclick=calculate;$('reset').onclick=()=>{ids.forEach(id=>$(id).type==='checkbox'?$(id).checked=defaults[id]:$(id).value=defaults[id]);localStorage.removeItem('etfPlanerSettings');$('results').style.display='none';refresh()};window.addEventListener('resize',()=>{if($('results').style.display==='block')calculate()});loadLocal();refresh();
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js")
+    .catch(err => console.warn("Service Worker konnte nicht registriert werden:", err)));
+}
+</script></body></html>
